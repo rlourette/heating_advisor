@@ -34,10 +34,27 @@ Pulls the NYISO **Day-Ahead hourly LMP** (published the evening before delivery)
 **Python 3.10+ required** (uses `float | None` type union syntax).
 
 ```bash
-pip install gridstatus pandas requests
+pip install gridstatus pandas requests sense-energy
 ```
 
-No API keys needed. Open-Meteo is free and unauthenticated. NYISO data is public.
+No API keys needed. Open-Meteo is free and unauthenticated. NYISO data is public. `sense-energy` is only required if using the Sense integration — the program runs without it.
+
+### Sense Energy Monitor (optional but recommended)
+
+The [Sense Energy Monitor](https://sense.com) clamps onto the two main legs of the 200A panel and uses machine learning to identify individual appliances by their electrical signature, including the LG heat pump. Once configured, the program uses Sense to:
+
+- Read current month-to-date kWh and automatically apply the correct Fairport Electric billing tier (Tier 1 or Tier 2) to every recommendation
+- Show whether the heat pump is actively running at the time the program is invoked
+- Display all devices currently drawing power
+
+To enable, add credentials to the config block at the top of `heating_advisor.py`:
+
+```python
+SENSE_EMAIL    = "your@email.com"
+SENSE_PASSWORD = "yourpassword"
+```
+
+Without credentials the program falls back silently to the flat `ELECTRIC_RETAIL_RATE_PER_KWH` value. Sense takes a few weeks after installation to reliably identify the heat pump.
 
 ---
 
@@ -47,10 +64,15 @@ All tunable values are at the top of `heating_advisor.py`. Update these before r
 
 | Variable | Recommended value | Notes |
 |---|---|---|
-| `ELECTRIC_RETAIL_RATE_PER_KWH` | `0.060` | See rate structure below — use blended rate from actual bill |
+| `SENSE_EMAIL` | `""` | Leave blank to disable; add credentials to enable tier-aware billing |
+| `SENSE_PASSWORD` | `""` | Sense account password |
+| `ELECTRIC_TIER1_RATE` | `0.0448` | Fairport Electric base rate, Tier 1 — from Dec 2025 rate sheet |
+| `ELECTRIC_TIER2_RATE` | `0.0673` | Fairport Electric base rate, Tier 2 (winter > 1,000 kWh) |
+| `ELECTRIC_PPAC_EST` | `0.015` | PPAC adder estimate — check current filing at dps.ny.gov |
+| `ELECTRIC_RETAIL_RATE_PER_KWH` | `0.060` | Flat fallback used when Sense is not connected |
 | `GAS_PRICE_PER_THERM` | `0.92` | National Fuel Gas bill — all-in supply + delivery |
 | `BOILER_AFUE` | `0.82` | Boiler nameplate or installation manual |
-| `COP_CURVE` | LG LGRED (Hyper Heat) data | Verify against spec sheet at lg-dfs.com|
+| `COP_CURVE` | LG LGRED (Hyper Heat) data | Verify against spec sheet at lg-dfs.com if model number is known |
 | `HIST_START` / `HIST_END` | Jan–Apr 2026 | Adjust for any date range |
 
 ### Fairport Electric rate structure (effective December 1, 2025)
@@ -64,7 +86,7 @@ Fairport Electric bills customers in two parts: a fixed **base rate** plus a var
 
 **PPAC adder:** Historically adds roughly $0.01–$0.02/kWh in normal conditions, higher during cold snaps. The current PPAC statement is public — Fairport Electric links to it from their FAQ page at [village.fairport.ny.us](https://www.village.fairport.ny.us/departments/electric_department/faqs.php), which routes to the NY PSC filing at dps.ny.gov.
 
-**Best approach for `ELECTRIC_RETAIL_RATE_PER_KWH`:** Take a recent winter bill, divide total charges (including PPAC, customer charge pro-rated) by total kWh. This blended number is what the script needs. If your son's winter usage is typically over 1,000 kWh/month, use a value closer to `0.070` to account for the higher tier.
+**Best approach for `ELECTRIC_RETAIL_RATE_PER_KWH`:** This is the fallback used when Sense is not connected. Take a recent winter bill, divide total charges (including PPAC, customer charge pro-rated) by total kWh. If Sense is configured, the program ignores this value and computes the marginal rate from live monthly usage and the tier values above.
 
 The `COP_CURVE` is a list of `(outdoor_temp_°F, COP)` pairs. The script interpolates linearly between points. The current curve is based on LG LGRED (Hyper Heat) published data:
 
@@ -169,12 +191,14 @@ Columns: `Date, Avg_Temp_F, COP, Elec_c_kwh_heat, Gas_c_kwh_heat, Avg_LMP, Max_L
 | [NYISO via gridstatus](https://github.com/gridstatus/gridstatus) | Real-time and day-ahead LMP, Zone C | Free |
 | [Open-Meteo Forecast API](https://open-meteo.com/) | Hourly temperature forecast | Free, no key |
 | [Open-Meteo Archive API](https://archive-api.open-meteo.com/) | Historical hourly temperature | Free, no key |
+| [Sense Energy Monitor](https://sense.com) (optional) | Month-to-date kWh, active devices, real-time watts | Hardware ~$299 |
 
 ---
 
 ## Limitations
 
-- **Fairport Electric rate is assumed flat.** The script uses a single blended rate. In reality, winter usage over 1,000 kWh/month is billed at a higher tier ($0.0673/kWh base vs $0.0448). Heavy electric-heat users may want to model a higher effective rate for peak winter months. If the utility ever moves to time-of-use pricing, the cost model would need to become hour-aware on the electric side.
+- **Tiered rate requires Sense to be automatic.** Without Sense, the program uses a flat `ELECTRIC_RETAIL_RATE_PER_KWH` and does not know whether the 1,000 kWh winter threshold has been crossed. With Sense connected, tier selection is automatic. The retrospective mode always uses the flat rate regardless, since historical monthly kWh data is not available from Sense for past billing periods.
+- **Sense device detection takes time.** The heat pump may not appear as a named device for several weeks after installation. During that period the monthly kWh total is still accurate; only the "heat pump running now" indicator will be missing.
 - **COP curve is a model, not a measurement.** The LG LGRED curve is based on published data with a pan heater adjustment applied below 32°F. Actual efficiency also depends on installation quality, refrigerant charge, duct/coil condition, and defrost cycling frequency. If the exact model number is available, replace `COP_CURVE` with data from the unit's submittal sheet for best accuracy.
 - **Day-ahead LMP is not available before ~7 PM the prior day.** Running the forecast mode in the morning will show `N/A` for LMP; recommendations will still be made from temperature alone.
 - **Boiler startup costs and thermal lag** are not modeled. Switching sources mid-day has a real-world friction cost not captured here.
