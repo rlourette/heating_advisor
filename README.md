@@ -13,7 +13,7 @@ Gas heat cost       =  gas_price ($/therm) ÷ (29.31 kWh/therm × AFUE)
 
 The **heat pump's COP drops as it gets colder outside**. That means there is a **breakeven temperature** — the outdoor °F where both systems cost the same per unit of heat. Above it, run the heat pump. Below it, run the gas boiler.
 
-> With typical Fairport Electric rates (~$0.095/kWh) and National Fuel Gas (~$0.92/therm), the breakeven lands around 25–30°F. Your mileage will vary once you plug in actual bill numbers.
+> With Fairport Electric's actual blended rate (~$0.055–$0.065/kWh) and National Fuel Gas (~$0.92/therm), the breakeven lands closer to **15–20°F**. This is a much colder threshold than the script's original placeholder suggested, meaning the heat pump is cost-effective for a much larger portion of the heating season.
 
 NYISO real-time and day-ahead LMP prices are fetched as an informational grid-stress signal, not as the primary decision driver. Fairport Electric customers pay a fixed retail rate regardless of what the wholesale grid is doing.
 
@@ -45,13 +45,26 @@ No API keys needed. Open-Meteo is free and unauthenticated. NYISO data is public
 
 All tunable values are at the top of `heating_advisor.py`. Update these before running:
 
-| Variable | Default | Where to find the real number |
+| Variable | Recommended value | Notes |
 |---|---|---|
-| `ELECTRIC_RETAIL_RATE_PER_KWH` | `0.095` | Fairport Electric bill — divide total charges by kWh used |
+| `ELECTRIC_RETAIL_RATE_PER_KWH` | `0.060` | See rate structure below — use blended rate from actual bill |
 | `GAS_PRICE_PER_THERM` | `0.92` | National Fuel Gas bill — all-in supply + delivery |
 | `BOILER_AFUE` | `0.82` | Boiler nameplate or installation manual |
 | `COP_CURVE` | Mitsubishi H2i data | Heat pump spec sheet or [NEEP database](https://ashp.neep.org/) |
 | `HIST_START` / `HIST_END` | Jan–Apr 2026 | Adjust for any date range |
+
+### Fairport Electric rate structure (effective December 1, 2025)
+
+Fairport Electric bills customers in two parts: a fixed **base rate** plus a variable **Purchased Power Adjustment Clause (PPAC)** adder. The PPAC is the pass-through cost of incremental power purchases above Fairport's hydro allocation, and it fluctuates — it rises in cold winters when more expensive supplemental power is needed, and is lower in mild months.
+
+**Base rate (from the published December 2025 rate sheet):**
+- Customer charge: $5.13/month
+- Energy charge: $0.0448/kWh for first 1,000 kWh (winter and non-winter)
+- Energy charge: $0.0673/kWh for usage **over** 1,000 kWh in winter (December–March)
+
+**PPAC adder:** Historically adds roughly $0.01–$0.02/kWh in normal conditions, higher during cold snaps. The current PPAC statement is public — Fairport Electric links to it from their FAQ page at [village.fairport.ny.us](https://www.village.fairport.ny.us/departments/electric_department/faqs.php), which routes to the NY PSC filing at dps.ny.gov.
+
+**Best approach for `ELECTRIC_RETAIL_RATE_PER_KWH`:** Take a recent winter bill, divide total charges (including PPAC, customer charge pro-rated) by total kWh. This blended number is what the script needs. If your son's winter usage is typically over 1,000 kWh/month, use a value closer to `0.070` to account for the higher tier.
 
 The `COP_CURVE` is a list of `(outdoor_temp_°F, COP)` pairs. The script interpolates linearly between points. A few reference points for common cold-climate inverter units:
 
@@ -109,7 +122,7 @@ Hour    Temp°F   COP  Elec¢/kWh-h  Gas¢/kWh-h   DA-LMP  Recommendation
 ```
 cost_e = retail_rate / COP(T)
 ```
-A heat pump at 30°F with COP 2.6 and a $0.095/kWh rate delivers heat at $0.0365/kWh-heat.
+A heat pump at 30°F with COP 2.6 and a $0.060/kWh blended rate delivers heat at $0.0231/kWh-heat.
 
 **Gas delivered-heat cost:**
 ```
@@ -152,7 +165,7 @@ Columns: `Date, Avg_Temp_F, COP, Elec_c_kwh_heat, Gas_c_kwh_heat, Avg_LMP, Max_L
 
 ## Limitations
 
-- **Fairport Electric rate is assumed flat.** If the utility ever moves to time-of-use pricing, the cost model would need to become hour-aware on the electric side.
+- **Fairport Electric rate is assumed flat.** The script uses a single blended rate. In reality, winter usage over 1,000 kWh/month is billed at a higher tier ($0.0673/kWh base vs $0.0448). Heavy electric-heat users may want to model a higher effective rate for peak winter months. If the utility ever moves to time-of-use pricing, the cost model would need to become hour-aware on the electric side.
 - **COP curve is a model, not a measurement.** Actual efficiency depends on installation quality, refrigerant charge, duct/coil condition, and defrost cycling. A well-maintained unit will perform closer to nameplate; a neglected one will not.
 - **Day-ahead LMP is not available before ~7 PM the prior day.** Running the forecast mode in the morning will show `N/A` for LMP; recommendations will still be made from temperature alone.
 - **Boiler startup costs and thermal lag** are not modeled. Switching sources mid-day has a real-world friction cost not captured here.
