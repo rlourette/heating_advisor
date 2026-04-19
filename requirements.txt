@@ -1,0 +1,8 @@
+# Core dependencies for NYISO Fairport data script
+gridstatus>=0.8.0
+pandas>=2.0.0
+python-dateutil>=2.8.0
+
+# Optional but recommended for better output and scheduling
+rich>=13.0.0          # for nicer console output (optional)
+schedule>=1.2.0       # if you want to run the script periodically
