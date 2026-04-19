@@ -50,7 +50,7 @@ All tunable values are at the top of `heating_advisor.py`. Update these before r
 | `ELECTRIC_RETAIL_RATE_PER_KWH` | `0.060` | See rate structure below — use blended rate from actual bill |
 | `GAS_PRICE_PER_THERM` | `0.92` | National Fuel Gas bill — all-in supply + delivery |
 | `BOILER_AFUE` | `0.82` | Boiler nameplate or installation manual |
-| `COP_CURVE` | LG LGRED (Hyper Heat) data | Verify against spec sheet at lg-dfs.com if model number is known |
+| `COP_CURVE` | LG LGRED (Hyper Heat) data | Verify against spec sheet at lg-dfs.com|
 | `HIST_START` / `HIST_END` | Jan–Apr 2026 | Adjust for any date range |
 
 ### Fairport Electric rate structure (effective December 1, 2025)
@@ -112,7 +112,7 @@ Date         AvgTemp   COP  Elec¢/kWh-h  Gas¢/kWh-h   AvgLMP   MaxLMP  Recomme
 2026-01-22      -2.1  1.43         4.20        3.83      71.4    118.7  🔴 GAS [⚡ grid stress]
 ```
 
-### Example forecast output
+`Elec¢/kWh-h` and `Gas¢/kWh-h` are both in **cents per kWh of delivered heat** — not electricity consumed. Electric heat cost = `retail_rate ÷ COP`. Gas heat cost = `gas_price ÷ (29.31 kWh/therm × AFUE)`. Both columns express the same unit so they can be compared directly; the lower number is the cheaper source for that day.
 
 ```
 Hour    Temp°F   COP  Elec¢/kWh-h  Gas¢/kWh-h   DA-LMP  Recommendation

@@ -352,6 +352,10 @@ def run_retrospective(nyiso_client):
         daily["avg_temp_f"] = 32.0
 
     # ── Print table ───────────────────────────────────────────────────────────
+    # Elec¢/kWh-h and Gas¢/kWh-h are both in cents per kWh of *delivered heat*
+    # (not electricity consumed).  Electric = retail_rate / COP.
+    # Gas = gas_price / (29.31 kWh/therm * AFUE).  Both columns use the same
+    # unit so they can be compared directly — lower number wins.
     print()
     hdr = (
         f"{'Date':<12} {'AvgTemp':>8} {'COP':>5} "
@@ -459,6 +463,10 @@ def run_forecast(nyiso_client):
         merged["lmp_da"] = None
 
     # ── Hour-by-hour table ────────────────────────────────────────────────────
+    # Elec¢/kWh-h and Gas¢/kWh-h are both in cents per kWh of *delivered heat*
+    # (not electricity consumed).  Electric = retail_rate / COP.
+    # Gas = gas_price / (29.31 kWh/therm * AFUE).  Both columns use the same
+    # unit so they can be compared directly — lower number wins.
     print()
     gas_cost_c = cost_per_kwh_heat_gas() * 100
 
