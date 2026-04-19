@@ -1,8 +1,14 @@
-# Core dependencies for NYISO Fairport data script
+# Core dependencies
 gridstatus>=0.8.0
 pandas>=2.0.0
+requests>=2.28.0
 python-dateutil>=2.8.0
 
-# Optional but recommended for better output and scheduling
-rich>=13.0.0          # for nicer console output (optional)
-schedule>=1.2.0       # if you want to run the script periodically
+# Sense Energy Monitor integration (optional)
+# Reads month-to-date kWh for automatic Fairport Electric tier selection.
+# Add SENSE_EMAIL and SENSE_PASSWORD to heating_advisor.py to enable.
+sense-energy>=0.9.0
+
+# Optional utilities
+rich>=13.0.0       # nicer console output
+schedule>=1.2.0    # run the script on a recurring schedule
