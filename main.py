@@ -47,7 +47,7 @@ import gridstatus
 # ── Electric ──────────────────────────────────────────────────────────────────
 # Fairport Electric blended retail rate (supply + delivery + taxes), $/kWh.
 # Check the most recent bill.  Municipal utilities in NY often run $0.07-0.11.
-ELECTRIC_RETAIL_RATE_PER_KWH = 0.095   # ← UPDATE from actual bill
+ELECTRIC_RETAIL_RATE_PER_KWH = 0.060   # Fairport Electric blended rate (base $0.0448 + PPAC est.)
 
 # ── Natural gas ───────────────────────────────────────────────────────────────
 # National Fuel Gas (or local supplier) all-in rate, $/therm.
