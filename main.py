@@ -17,9 +17,11 @@ Key design decisions
   ELECTRIC_RETAIL_RATE_PER_KWH to your son's actual blended rate from his
   bill (delivery + supply + taxes).
 
-* Heat-pump COP degrades with outdoor temperature.  A cold-climate inverter
-  (e.g. Mitsubishi H2i, Bosch IDS 2.0) is modeled with a piecewise linear
-  COP curve.  Adjust COP_CURVE to match the specific equipment nameplate.
+* Heat-pump COP degrades with outdoor temperature.  The COP_CURVE is modeled
+  on LG LGRED (Hyper Heat) published data, adjusted down ~0.1 below 32°F to
+  account for drain pan heater draw that LG omits from their test submissions.
+  If the exact model number is known, pull the submittal sheet from lg-dfs.com
+  and replace the curve points below.
 
 * Natural gas cost is in $/therm.  Rochester-area National Fuel Gas rates
   are typically $0.80 - $1.10/therm for residential supply + delivery.
@@ -45,9 +47,11 @@ import gridstatus
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Electric ──────────────────────────────────────────────────────────────────
-# Fairport Electric blended retail rate (supply + delivery + taxes), $/kWh.
-# Check the most recent bill.  Municipal utilities in NY often run $0.07-0.11.
-ELECTRIC_RETAIL_RATE_PER_KWH = 0.060   # Fairport Electric blended rate (base $0.0448 + PPAC est.)
+# Fairport Electric blended retail rate (base $0.0448/kWh + PPAC est.), $/kWh.
+# Base rate effective Dec 1, 2025.  PPAC adds ~$0.01-0.02 in normal conditions,
+# more during cold snaps.  Best value: divide total winter bill by kWh used.
+# If winter usage exceeds 1,000 kWh/month, use 0.070 to reflect the upper tier.
+ELECTRIC_RETAIL_RATE_PER_KWH = 0.060   # ← UPDATE from actual bill
 
 # ── Natural gas ───────────────────────────────────────────────────────────────
 # National Fuel Gas (or local supplier) all-in rate, $/therm.
@@ -61,16 +65,18 @@ BOILER_AFUE = 0.82
 
 # ── Heat pump COP curve ───────────────────────────────────────────────────────
 # Piecewise-linear COP vs outdoor °F.
-# Source: Mitsubishi MXZ-SM H2i published data (adjust for actual unit).
+# Source: LG LGRED (Hyper Heat) published AHRI/NEEP data.
+# Values at 5°F and 17°F adjusted down ~0.1 from published figures to account
+# for drain pan heater draw (~120W) that LG omits from low-temp test submissions.
 # Format: [(outdoor_temp_F, COP), ...] — must be sorted ascending.
 COP_CURVE = [
-    (-13, 1.2),
-    (  5, 1.6),
-    ( 17, 1.9),
-    ( 27, 2.4),
-    ( 35, 2.9),
-    ( 47, 3.5),
-    ( 60, 4.0),
+    (-13, 1.3),
+    (  5, 2.0),
+    ( 17, 2.5),
+    ( 27, 3.1),
+    ( 35, 3.6),
+    ( 47, 4.2),
+    ( 60, 4.5),
 ]
 
 # ── Location (Fairport, NY) ───────────────────────────────────────────────────
@@ -395,10 +401,10 @@ def run_retrospective(nyiso_client):
     print(f"    🟡 Toss-up     : {n_tossup:4d} days ({100*n_tossup/total:.0f}%)")
 
     # Optional CSV export
-    # ts = datetime.now().strftime("%Y%m%d_%H%M")
-    # fname = f"heating_retrospective_{ts}.csv"
-    # df_out.to_csv(fname, index=False)
-    # print(f"\n  Results saved to: {fname}")
+    ts = datetime.now().strftime("%Y%m%d_%H%M")
+    fname = f"heating_retrospective_{ts}.csv"
+    df_out.to_csv(fname, index=False)
+    print(f"\n  Results saved to: {fname}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -533,4 +539,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-1
